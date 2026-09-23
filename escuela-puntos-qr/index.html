@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0b0f19">
+  <title>EduPuntos QR - Control Escolar de Puntos y Asistencia</title>
+  <meta name="description" content="Sistema dinámico de asignación de puntos escolares mediante códigos QR y pseudónimos con validación de horario lectivo y base de datos SQLite.">
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- Bibliotecas locales para escaneo y generación de QR -->
+  <script src="js/qrcode.min.js"></script>
+  <script src="js/html5-qrcode.min.js"></script>
+</head>
+<body>
+
+  <!-- ================= CABECERA PRINCIPAL ================= -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">🎓</div>
+      <div>
+        <div class="brand-title">EduPuntos QR</div>
+        <div class="brand-subtitle">Control Escolar y Asistencia</div>
+      </div>
+    </div>
+    
+    <div class="header-actions">
+      <!-- Badge de Estado Horario -->
+      <div id="header-status-badge" class="badge-status">
+        <span class="status-dot"></span>
+        <span id="header-status-text">Comprobando...</span>
+      </div>
+
+      <!-- Botón Conectar Móvil (QR de IP Local) -->
+      <button id="btn-mobile-connect" class="btn-icon" title="Abrir en Móvil (Android/iOS)" aria-label="Abrir en Móvil">
+        📱
+      </button>
+
+      <!-- Botón Alternar Tema -->
+      <button id="btn-theme-toggle" class="btn-icon" title="Cambiar Tema" aria-label="Cambiar Tema">
+        🌙
+      </button>
+
+      <!-- Botón Cierre de Sesión (Cierre Web) -->
+      <button id="btn-logout" class="btn-icon" title="Cierre Web / Bloquear" aria-label="Cierre Web" style="display: none;">
+        🔒
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= BARRA DE CONTROL HORARIO (SIMULACIÓN DEMO) ================= -->
+  <div class="schedule-bar">
+    <div class="schedule-info">
+      <span>⏰ <strong id="clock-display">--:--:--</strong></span>
+      <span style="opacity: 0.5;">|</span>
+      <span id="calendar-display">Lunes - Viernes 08:00 a 14:30</span>
+    </div>
+    <label class="sim-switch" title="Activa o desactiva la simulación de horario lectivo para realizar pruebas en cualquier momento">
+      <input type="checkbox" id="sim-hours-toggle" class="switch-input" checked>
+      <span class="switch-slider"></span>
+      <span class="sim-label">Modo Simulación Lectivo</span>
+    </label>
+  </div>
+
+  <!-- ================= CONTENEDOR PRINCIPAL ================= -->
+  <main class="main-container">
+
+    <!-- -------------------------------------------------------------
+         VISTA 1: FUERA DE HORARIO LECTIVO (CERRADO)
+         ------------------------------------------------------------- -->
+    <section id="view-closed" class="view-section">
+      <div class="closed-card">
+        <div class="closed-icon">⏳</div>
+        <h2 class="closed-title">Página Cerrada</h2>
+        <p class="closed-desc">
+          El sistema de escaneo de puntos está inactivo fuera del horario lectivo establecido.
+        </p>
+        <div class="schedule-pill">
+          📅 Lunes a Viernes &nbsp;|&nbsp; 🕒 08:00 a 14:30
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 20px;">
+          Actualmente el servidor detecta que estamos fuera de la franja lectiva escolar.
+        </p>
+        <button id="btn-force-open-demo" class="btn-primary">
+          🧪 Activar Modo Simulación para Pruebas
+        </button>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------
+         VISTA 2: ACCESO DOCENTE (PEDIR LOGIN CON PIN PAD)
+         ------------------------------------------------------------- -->
+    <section id="view-login" class="view-section">
+      <div class="login-card">
+        <div class="login-avatar">👨‍🏫</div>
+        <h2 class="font-heading" style="font-size: 1.35rem; margin-bottom: 4px;">Acceso del Profesorado</h2>
+        <p style="font-size: 0.82rem; color: var(--text-secondary);">
+          Introduce la llave de acceso (Clave Demo: <strong>0000</strong>)
+        </p>
+
+        <!-- Indicador de PIN (4 dígitos) -->
+        <div class="pin-display" id="pin-dots">
+          <div class="pin-dot"></div>
+          <div class="pin-dot"></div>
+          <div class="pin-dot"></div>
+          <div class="pin-dot"></div>
+        </div>
+
+        <div class="pin-message" id="pin-message"></div>
+
+        <!-- Teclado Numérico Touch Ergonómico -->
+        <div class="numpad">
+          <button class="num-btn" data-key="1">1</button>
+          <button class="num-btn" data-key="2">2</button>
+          <button class="num-btn" data-key="3">3</button>
+          <button class="num-btn" data-key="4">4</button>
+          <button class="num-btn" data-key="5">5</button>
+          <button class="num-btn" data-key="6">6</button>
+          <button class="num-btn" data-key="7">7</button>
+          <button class="num-btn" data-key="8">8</button>
+          <button class="num-btn" data-key="9">9</button>
+          <button class="num-btn fn-btn" data-key="clear" title="Borrar todo">C</button>
+          <button class="num-btn" data-key="0">0</button>
+          <button class="num-btn fn-btn" data-key="backspace" title="Borrar último dígito">⌫</button>
+        </div>
+
+        <button id="btn-quick-pin" style="margin-top: 18px; background: none; border: none; color: #60a5fa; font-size: 0.8rem; text-decoration: underline; cursor: pointer;">
+          ⚡ Rellenar automáticamente clave demo (0000)
+        </button>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------
+         VISTA 3: SELECTOR DE LAS 4 SECCIONES
+         ------------------------------------------------------------- -->
+    <section id="view-sections" class="view-section">
+      <div class="sections-header">
+        <div class="docente-badge">
+          <span>🛡️ Sesión Activa: Profesor Demo</span>
+        </div>
+        <h2 class="font-heading" style="font-size: 1.4rem; margin-bottom: 4px;">Selecciona la Sección</h2>
+        <p style="font-size: 0.82rem; color: var(--text-secondary);">
+          Elige en qué actividad vas a registrar el escaneo de los códigos QR:
+        </p>
+      </div>
+
+      <div class="sections-grid">
+        <!-- 1. Llegada -->
+        <div class="section-card llegada" data-seccion="llegada">
+          <div class="section-icon-box">🌅</div>
+          <div class="section-details">
+            <div class="section-title">Conteo de Llegada</div>
+            <div class="section-desc">Puntualidad e ingreso al centro escolar</div>
+          </div>
+          <div class="section-points-badge">+1 pto</div>
+        </div>
+
+        <!-- 2. Taller -->
+        <div class="section-card taller" data-seccion="taller">
+          <div class="section-icon-box">🔬</div>
+          <div class="section-details">
+            <div class="section-title">Taller</div>
+            <div class="section-desc">Prácticas experimentales y proyectos</div>
+          </div>
+          <div class="section-points-badge">+3 ptos</div>
+        </div>
+
+        <!-- 3. Excursiones -->
+        <div class="section-card excursiones" data-seccion="excursiones">
+          <div class="section-icon-box">🚌</div>
+          <div class="section-details">
+            <div class="section-title">Excursiones</div>
+            <div class="section-desc">Salidas culturales, visitas y naturaleza</div>
+          </div>
+          <div class="section-points-badge">+4 ptos</div>
+        </div>
+
+        <!-- 4. Divulgación -->
+        <div class="section-card divulgacion" data-seccion="divulgacion">
+          <div class="section-icon-box">📢</div>
+          <div class="section-details">
+            <div class="section-title">Divulgación</div>
+            <div class="section-desc">Presentaciones, debates y conferencias</div>
+          </div>
+          <div class="section-points-badge">+5 ptos</div>
+        </div>
+      </div>
+
+      <!-- Acceso Rápido a Base de Datos -->
+      <div style="margin-top: 20px; display: flex; gap: 10px;">
+        <button id="btn-goto-bbdd" class="btn-secondary" style="flex: 1;">
+          📊 Ver Ranking y Base de Datos
+        </button>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------
+         VISTA 4: ESCÁNER QR EN SECCIÓN DESEADA
+         ------------------------------------------------------------- -->
+    <section id="view-scanner" class="view-section">
+      <!-- Banner de la sección activa -->
+      <div id="scanner-banner" class="scan-active-banner llegada">
+        <div>
+          <span id="active-section-name">Conteo de Llegada</span>
+          <span id="active-section-points" style="font-size: 0.8rem; opacity: 0.9; margin-left: 6px;">(+1 pto)</span>
+        </div>
+        <button id="btn-change-section" class="btn-pill-small">
+          🔄 Cambiar
+        </button>
+      </div>
+
+      <!-- Visor de la Cámara -->
+      <div class="scanner-box" id="scanner-box-wrapper">
+        <div id="reader"></div>
+        <div class="scanner-overlay" id="scanner-overlay" style="display: none;">
+          <div class="scan-frame"></div>
+        </div>
+
+        <!-- Estado en Reposo (Cámara inactiva) -->
+        <div class="scanner-placeholder" id="scanner-placeholder">
+          <div class="scanner-placeholder-icon">📷</div>
+          <div class="scanner-placeholder-title">Cámara Inactiva</div>
+          <p class="scanner-placeholder-desc">Pulsa "Iniciar Cámara" para activar el visor en directo o usa "Foto QR" para capturar con la cámara del dispositivo.</p>
+          <button id="btn-quick-start-cam" class="btn-primary-small" type="button">
+            ▶️ Activar Visor
+          </button>
+        </div>
+
+        <!-- Estado de Conexión / Carga -->
+        <div class="scanner-loading" id="scanner-loading" style="display: none;">
+          <div class="scanner-spinner"></div>
+          <div class="scanner-loading-title">Conectando con la cámara...</div>
+          <p class="scanner-loading-desc">Solicitando permisos y encendiendo el sensor de video.</p>
+        </div>
+
+        <!-- Estado de Error Detallado -->
+        <div class="scanner-error-card" id="scanner-error" style="display: none;">
+          <div class="scanner-error-icon" id="scanner-error-icon">⚠️</div>
+          <div class="scanner-error-title" id="scanner-error-title">No se pudo acceder a la cámara</div>
+          <p class="scanner-error-desc" id="scanner-error-desc">Error al inicializar el dispositivo de video.</p>
+          <div class="scanner-error-actions">
+            <button id="btn-retry-camera" class="btn-primary-small" type="button">
+              🔄 Reintentar
+            </button>
+            <label class="btn-secondary-small" style="cursor: pointer;" title="Hacer foto directamente con la cámara del móvil">
+              📸 Hacer Foto QR
+              <input type="file" id="qr-input-camera-fallback" accept="image/*" capture="environment" style="display: none;">
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Selector de Dispositivos Detectados -->
+      <div class="camera-select-container" id="camera-select-container" style="display: none;">
+        <label for="camera-select" class="camera-select-label">🎥 Cámara:</label>
+        <select id="camera-select" class="camera-select-dropdown" aria-label="Seleccionar cámara"></select>
+      </div>
+
+      <!-- Controles de Cámara y Subida de Archivo -->
+      <div class="camera-controls">
+        <button id="btn-toggle-camera" class="btn-secondary" title="Iniciar o Pausar Cámara">
+          📷 Iniciar Cámara
+        </button>
+        <button id="btn-flip-camera" class="btn-secondary" title="Alternar entre cámaras disponibles">
+          🔄 Cambiar Lente
+        </button>
+        <label class="btn-secondary" style="margin: 0; cursor: pointer;" title="Hacer foto instantánea con la cámara nativa">
+          📸 Foto QR
+          <input type="file" id="qr-input-camera" accept="image/*" capture="environment" style="display: none;">
+        </label>
+        <label class="btn-secondary" style="margin: 0; cursor: pointer;" title="Escanear desde un archivo de imagen">
+          📁 Subir
+          <input type="file" id="qr-input-file" accept="image/*" style="display: none;">
+        </label>
+      </div>
+
+      <!-- Aviso informativo de Contexto Inseguro si se accede desde móvil por HTTP -->
+      <div id="insecure-context-banner" class="insecure-context-card" style="display: none;">
+        <span style="font-size: 1.1rem;">🔒</span>
+        <div style="flex: 1; font-size: 0.75rem; color: var(--text-secondary); line-height: 1.35;">
+          <strong>Aviso de seguridad móvil (HTTP):</strong> Los navegadores móviles bloquean el video en directo en redes locales sin HTTPS. 
+          Utiliza el botón <strong>"📸 Foto QR"</strong> para escanear con la cámara nativa de tu teléfono al instante.
+        </div>
+      </div>
+
+      <!-- Panel Rápido: Alumnos Demo para Pruebas Instantáneas -->
+      <div class="demo-students-section">
+        <div class="demo-students-header">
+          <div class="demo-students-title">
+            <span>🎒 Alumnos Demo (Pseudónimos Protegidos)</span>
+          </div>
+          <button id="btn-open-all-cards" style="background: none; border: none; color: #38bdf8; font-size: 0.75rem; cursor: pointer; text-decoration: underline;">
+            Ver Todos los QR
+          </button>
+        </div>
+        <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 10px;">
+          Pulsa <strong>"Escanear"</strong> para simular el pase del carnet en esta sección, o <strong>"Ver QR"</strong> para mostrar el código en pantalla:
+        </p>
+        <div class="students-chips-grid" id="demo-chips-container">
+          <!-- Generado dinámicamente por JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------
+         VISTA 5: BASE DE DATOS Y CLASIFICACIÓN (BBDD)
+         ------------------------------------------------------------- -->
+    <section id="view-database" class="view-section">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+        <h2 class="font-heading" style="font-size: 1.35rem;">Base de Datos Escolar</h2>
+        <button id="btn-back-to-sections" class="btn-pill-small" style="background: var(--surface-card); color: var(--text-primary); border: 1px solid var(--surface-border);">
+          ⬅ Volver
+        </button>
+      </div>
+
+      <!-- Pestañas: Ranking / Registros Históricos -->
+      <div class="bbdd-view-tabs">
+        <button class="tab-btn active" id="tab-ranking" data-tab="ranking">🏆 Ranking Alumnos</button>
+        <button class="tab-btn" id="tab-logs" data-tab="logs">📋 Historial SQLite</button>
+      </div>
+
+      <!-- Pestaña 1: Ranking -->
+      <div id="tab-content-ranking">
+        <div class="ranking-list" id="ranking-container">
+          <!-- Contenido cargado dinámicamente -->
+        </div>
+      </div>
+
+      <!-- Pestaña 2: Historial en BBDD -->
+      <div id="tab-content-logs" style="display: none;">
+        <div style="margin-bottom: 10px; display: flex; gap: 8px;">
+          <input type="text" id="filter-pseudonym" placeholder="Filtrar por pseudónimo..." style="flex: 1; padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--surface-border); background: var(--surface-card); color: var(--text-primary); font-size: 0.8rem;">
+          <button id="btn-refresh-db" class="btn-icon" title="Actualizar datos">🔄</button>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Pseudónimo</th>
+                <th>Sección</th>
+                <th>Pts</th>
+              </tr>
+            </thead>
+            <tbody id="logs-tbody">
+              <!-- Registros dinámicos -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Acciones de Administración Demo -->
+      <div style="margin-top: 18px; display: flex; gap: 8px;">
+        <button id="btn-export-csv" class="btn-secondary" style="flex: 1;">
+          📥 Exportar CSV
+        </button>
+        <button id="btn-reset-db" class="btn-secondary" style="color: #f87171; border-color: rgba(239, 68, 68, 0.3);" title="Reiniciar puntos para pruebas limpias">
+          🗑️ Resetear BBDD
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= BARRA DE NAVEGACIÓN INFERIOR (MOBILE BOTTOM NAV) ================= -->
+  <nav class="bottom-nav" id="app-bottom-nav" style="display: none;">
+    <button class="nav-item active" id="nav-sections" data-view="view-sections">
+      <span class="nav-icon">📚</span>
+      <span>Secciones</span>
+    </button>
+    <button class="nav-item" id="nav-scanner" data-view="view-scanner">
+      <span class="nav-icon">📷</span>
+      <span>Escáner</span>
+    </button>
+    <button class="nav-item" id="nav-database" data-view="view-database">
+      <span class="nav-icon">📊</span>
+      <span>BBDD</span>
+    </button>
+  </nav>
+
+  <!-- ================= MODAL DE FEEDBACK / RESULTADO DEL ESCANEO ================= -->
+  <div class="scan-feedback-modal" id="scan-feedback-modal">
+    <div class="feedback-card">
+      <div class="feedback-icon success" id="feedback-icon">✓</div>
+      <h3 class="feedback-title" id="feedback-title">¡Escaneo Correcto!</h3>
+      <p class="feedback-desc" id="feedback-desc">Puntos asignados al alumno.</p>
+      <button class="btn-primary" id="btn-close-feedback">Aceptar</button>
+    </div>
+  </div>
+
+  <!-- ================= MODAL TARJETA QR INDIVIDUAL DE ALUMNO ================= -->
+  <div class="qr-modal" id="student-qr-modal">
+    <div class="qr-card-display">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">Carnet Escolar Protegido</span>
+        <button id="btn-close-qr-modal" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b;">✕</button>
+      </div>
+      <h3 id="modal-student-alias" style="color: #0f172a; margin-bottom: 2px;">Lince Ágil</h3>
+      <div id="modal-student-pseudonym" style="font-family: monospace; font-size: 0.85rem; color: #0284c7; font-weight: 700; margin-bottom: 12px;">ALUM-LINCE-01</div>
+      
+      <!-- Contenedor del código QR generado dinámicamente -->
+      <div class="qr-card-canvas" id="modal-qr-container"></div>
+
+      <p style="font-size: 0.72rem; color: #64748b; margin-top: 8px; line-height: 1.4;">
+        Apunta la cámara del móvil a este código para registrar los puntos en la sección seleccionada.
+      </p>
+      <div style="margin-top: 14px; display: flex; gap: 8px;">
+        <button id="btn-scan-this-student" class="btn-primary" style="padding: 10px; font-size: 0.85rem;">
+          ⚡ Escanear Ahora
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL CONEXIÓN MÓVIL (QR IP LOCAL) ================= -->
+  <div class="qr-modal" id="mobile-connect-modal">
+    <div class="qr-card-display" style="max-width: 360px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">Conectar Móvil (Wi-Fi)</span>
+        <button id="btn-close-mobile-modal" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b;">✕</button>
+      </div>
+      <h3 style="color: #0f172a; margin-bottom: 4px;">Abre la Web en tu Smartphone</h3>
+      <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 8px;">
+        Asegúrate de que tu móvil está en la misma red Wi-Fi y escanea este código:
+      </p>
+
+      <!-- Selector de IP si hay varias redes (ej: Wi-Fi vs VPN) -->
+      <div id="mobile-ip-selector-container" style="margin-bottom: 8px; display: none;">
+        <label style="font-size: 0.72rem; color: #64748b; font-weight: 600; display: block; margin-bottom: 4px;">Red detectada:</label>
+        <select id="mobile-ip-select" style="width: 100%; padding: 6px 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.8rem; background: #f8fafc; color: #0f172a; font-weight: 600;">
+        </select>
+      </div>
+
+      <div class="qr-card-canvas" id="mobile-qr-container"></div>
+
+      <div style="background: #f1f5f9; padding: 8px 12px; border-radius: 8px; font-family: monospace; font-size: 0.85rem; color: #2563eb; font-weight: 700; word-break: break-all; margin-bottom: 8px;" id="mobile-url-display">
+        http://...
+      </div>
+
+      <p style="font-size: 0.7rem; color: #94a3b8; line-height: 1.3;">
+        💡 <strong>Nota:</strong> Si tienes un antivirus con VPN (como McAfee VPN), debes usar la IP de tu <strong>Wi-Fi local (192.168.1.188)</strong> para que tu teléfono pueda conectarse.
+      </p>
+    </div>
+  </div>
+
+  <!-- Script principal de la aplicación -->
+  <script src="js/app.js"></script>
+</body>
+</html>
