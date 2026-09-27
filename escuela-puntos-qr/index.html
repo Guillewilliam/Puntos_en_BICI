@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0b0f19">
-  <title>EduPuntos QR - Control Escolar de Puntos y Asistencia</title>
+  <title>CONTACLETA - Recuento de participación RIDE</title>
   <meta name="description" content="Sistema dinámico de asignación de puntos escolares mediante códigos QR y pseudónimos con validación de horario lectivo y base de datos SQLite.">
   <link rel="stylesheet" href="css/styles.css">
   <!-- Bibliotecas locales para escaneo y generación de QR -->
@@ -18,12 +18,14 @@
   <!-- ================= CABECERA PRINCIPAL ================= -->
   <header class="app-header">
     <div class="brand">
-      <div class="brand-icon">🎓</div>
-      <div>
-        <div class="brand-title">EduPuntos QR</div>
-        <div class="brand-subtitle">Control Escolar y Asistencia</div>
-      </div>
-    </div>
+    <div class="brand-icon">
+      <img src="imgLogo.jpeg" alt="Logo Contacleta" style="width: 32px; height: 32px; border-radius: 5px;">
+  </div>
+  <div>
+    <div class="brand-title">CONTACLETA</div>
+    <div class="brand-subtitle">Recuento de participación RIDE</div>
+  </div>
+</div>
     
     <div class="header-actions">
       <!-- Badge de Estado Horario -->
@@ -146,46 +148,46 @@
       </div>
 
       <div class="sections-grid">
-        <!-- 1. Llegada -->
-        <div class="section-card llegada" data-seccion="llegada">
-          <div class="section-icon-box">🌅</div>
-          <div class="section-details">
-            <div class="section-title">Conteo de Llegada</div>
-            <div class="section-desc">Puntualidad e ingreso al centro escolar</div>
-          </div>
-          <div class="section-points-badge">+1 pto</div>
-        </div>
+  <!-- 1. Llegada -->
+  <div class="section-card llegada" data-seccion="llegada">
+    <div class="section-icon-box">🚲</div>
+    <div class="section-details">
+      <div class="section-title">Al cole en bici</div>
+      <div class="section-desc">Puntualidad e ingreso al centro escolar</div>
+    </div>
+    <div class="section-points-badge">+1 pto</div>
+  </div>
 
-        <!-- 2. Taller -->
-        <div class="section-card taller" data-seccion="taller">
-          <div class="section-icon-box">🔬</div>
-          <div class="section-details">
-            <div class="section-title">Taller</div>
-            <div class="section-desc">Prácticas experimentales y proyectos</div>
-          </div>
-          <div class="section-points-badge">+3 ptos</div>
-        </div>
+  <!-- 2. Taller -->
+  <div class="section-card taller" data-seccion="taller">
+    <div class="section-icon-box">🛠️</div>
+    <div class="section-details">
+      <div class="section-title">Taller</div>
+      <div class="section-desc">Prácticas experimentales y proyectos</div>
+    </div>
+    <div class="section-points-badge">+0 ptos</div>
+  </div>
 
-        <!-- 3. Excursiones -->
-        <div class="section-card excursiones" data-seccion="excursiones">
-          <div class="section-icon-box">🚌</div>
-          <div class="section-details">
-            <div class="section-title">Excursiones</div>
-            <div class="section-desc">Salidas culturales, visitas y naturaleza</div>
-          </div>
-          <div class="section-points-badge">+4 ptos</div>
-        </div>
+  <!-- 3. Excursiones -->
+  <div class="section-card excursiones" data-seccion="excursiones">
+    <div class="section-icon-box">🛣️</div>
+    <div class="section-details">
+      <div class="section-title">Ruta en bici</div>
+      <div class="section-desc">Salidas culturales, visitas y naturaleza</div>
+    </div>
+    <div class="section-points-badge">+0 ptos</div>
+  </div>
 
-        <!-- 4. Divulgación -->
-        <div class="section-card divulgacion" data-seccion="divulgacion">
-          <div class="section-icon-box">📢</div>
-          <div class="section-details">
-            <div class="section-title">Divulgación</div>
-            <div class="section-desc">Presentaciones, debates y conferencias</div>
-          </div>
-          <div class="section-points-badge">+5 ptos</div>
-        </div>
-      </div>
+  <!-- 4. Divulgación -->
+  <div class="section-card divulgacion" data-seccion="divulgacion">
+    <div class="section-icon-box">📢</div>
+    <div class="section-details">
+      <div class="section-title">Divulgación</div>
+      <div class="section-desc">Presentaciones, debates y conferencias</div>
+    </div>
+    <div class="section-points-badge">+0 ptos</div>
+  </div>
+</div>
 
       <!-- Acceso Rápido a Base de Datos -->
       <div style="margin-top: 20px; display: flex; gap: 10px;">

@@ -29,15 +29,15 @@ def get_ssl_context():
         return ctx
     return None
 
-PORT = int(os.environ.get("PORT", 8000))
+PORT = 8000
 DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "escuela_puntos.db")
 STATIC_DIR = os.path.dirname(os.path.abspath(__file__))
 
 SECCIONES_CONFIG = {
-    "llegada": {"nombre": "Conteo de Llegada", "puntos": 1, "color": "#0284c7"},
-    "taller": {"nombre": "Taller", "puntos": 3, "color": "#ea580c"},
-    "excursiones": {"nombre": "Excursiones", "puntos": 4, "color": "#16a34a"},
-    "divulgacion": {"nombre": "Divulgación", "puntos": 5, "color": "#9333ea"}
+    "llegada": {"nombre": "🚲 Al cole en bici", "puntos": 1, "color": "#0284c7"},
+    "taller": {"nombre": "🛠️ Taller", "puntos": 0, "color": "#ea580c"},
+    "excursiones": {"nombre": "🛣️ Ruta en bici", "puntos": 0, "color": "#16a34a"},
+    "divulgacion": {"nombre": "📢 Divulgación", "puntos": 0, "color": "#9333ea"}
 }
 
 PIN_DOCENTE = "0000"
