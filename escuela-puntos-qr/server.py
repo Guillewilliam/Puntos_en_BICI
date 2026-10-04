@@ -18,9 +18,7 @@ import datetime
 from urllib.parse import urlparse, parse_qs
 
 def get_ssl_context():
-    """Load self‑signed certificate if present.
-    Returns an ssl.SSLContext or None.
-    """
+    """Carga certificado auto-firmado si está presente."""
     cert_path = os.path.join(os.path.dirname(__file__), "cert.pem")
     key_path = os.path.join(os.path.dirname(__file__), "key.pem")
     if os.path.isfile(cert_path) and os.path.isfile(key_path):
@@ -53,7 +51,6 @@ def get_all_local_ips():
     except Exception:
         pass
     
-    # Fallback si estuviera vacío
     if not candidates:
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -63,14 +60,13 @@ def get_all_local_ips():
         except Exception:
             candidates.append("127.0.0.1")
 
-    # Priorización: Las redes domésticas/escolares Wi-Fi estándar son 192.168.x.x
     def ip_score(ip):
         if ip.startswith("192.168."):
-            return 100  # Máxima prioridad: Wi-Fi estándar
+            return 100
         elif ip.startswith("172."):
-            return 50   # Prioridad media: Redes privadas clase B
+            return 50
         elif ip.startswith("10."):
-            return 10   # Baja prioridad: VPNs como McAfee VPN o WSL
+            return 10
         return 0
 
     candidates.sort(key=ip_score, reverse=True)
@@ -95,7 +91,7 @@ def init_database():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     
-    # Tabla de alumnos (protección de datos: usamos pseudónimos como identificador público)
+    # Tabla de alumnos
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS alumnos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -108,7 +104,6 @@ def init_database():
     """)
 
     # Tabla de registros de puntos y escaneos
-    # Regla: Los QR solo se pueden escanear una vez por sección de 08:00 a 14:30 de L-V
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS registros (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -124,13 +119,13 @@ def init_database():
     );
     """)
 
-    # Precarga de alumnos de muestra si está vacía
+    # Precarga de los 2 alumnos demo si la tabla está vacía
     cursor.execute("SELECT COUNT(*) FROM alumnos")
     count = cursor.fetchone()[0]
     if count == 0:
         alumnos_demo = [
             ("ALUM-LINCE-01", "Lince Ágil", "1º ESO A"),
-            ("https://www.ride-laviniafontana.com, Lavinia Fontana, 1ºESO A")
+            ("HTTPS://WWW.RIDE-LAVINIAFONTANA.COM", "Lavinia Fontana", "1º ESO A")
         ]
         cursor.executemany(
             "INSERT INTO alumnos (pseudonimo, alias, grupo, total_puntos) VALUES (?, ?, ?, 0)",
@@ -147,15 +142,12 @@ def es_horario_lectivo(dt=None):
     if dt is None:
         dt = datetime.datetime.now()
     
-    # 0 = Lunes, 4 = Viernes, 5 = Sábado, 6 = Domingo
     es_dia_lectivo = 0 <= dt.weekday() <= 4
-    
     hora_actual = dt.time()
     hora_inicio = datetime.time(8, 0, 0)
     hora_fin = datetime.time(14, 30, 0)
     
-    dentro_horario = hora_inicio <= hora_actual <= hora_fin
-    return es_dia_lectivo and dentro_horario
+    return es_dia_lectivo and (hora_inicio <= hora_actual <= hora_fin)
 
 class EscuelaPointsHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -240,7 +232,6 @@ class EscuelaPointsHandler(http.server.SimpleHTTPRequestHandler):
             self._send_json({"ok": True, "registros": registros})
             return
 
-        # Servir estáticos normales
         return super().do_GET()
 
     def do_POST(self):
@@ -265,11 +256,11 @@ class EscuelaPointsHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         elif path == "/api/escanear":
-            pseudonimo = str(body.get("pseudonimo", "")).strip().upper()
+            raw_input = str(body.get("pseudonimo", "")).strip()
             seccion = str(body.get("seccion", "")).strip().lower()
             simulated = bool(body.get("simulated", False))
             
-            if not pseudonimo:
+            if not raw_input:
                 self._send_json({"ok": False, "message": "Código QR / Pseudónimo no proporcionado."}, status=400)
                 return
 
@@ -277,11 +268,16 @@ class EscuelaPointsHandler(http.server.SimpleHTTPRequestHandler):
                 self._send_json({"ok": False, "message": f"Sección inválida: {seccion}"}, status=400)
                 return
 
+            # Si el contenido del QR incluye datos separados por coma ("URL, Alias, Grupo")
+            parts = [p.strip() for p in raw_input.split(",")]
+            pseudonimo = parts[0].upper()
+            extracted_alias = parts[1] if len(parts) > 1 else None
+            extracted_grupo = parts[2] if len(parts) > 2 else "Grupo A"
+
             now = datetime.datetime.now()
             fecha_hoy = now.strftime("%Y-%m-%d")
             hora_actual = now.strftime("%H:%M:%S")
 
-            # Validación de horario lectivo (Lunes a Viernes 08:00 a 14:30)
             if not simulated and not es_horario_lectivo(now):
                 self._send_json({
                     "ok": False,
@@ -298,22 +294,23 @@ class EscuelaPointsHandler(http.server.SimpleHTTPRequestHandler):
             cursor = conn.cursor()
 
             try:
-                # 1. Buscar alumno o crear si es nuevo pseudónimo
-                cursor.execute("SELECT id, pseudonimo, alias, total_puntos FROM alumnos WHERE pseudonimo = ?", (pseudonimo,))
+                # 1. Buscar alumno existente por pseudónimo (sensible/insensible a mayúsculas)
+                cursor.execute("SELECT id, pseudonimo, alias, total_puntos FROM alumnos WHERE UPPER(pseudonimo) = ?", (pseudonimo,))
                 alumno = cursor.fetchone()
+
                 if not alumno:
-                    # Crear nuevo alumno con este pseudónimo
-                    alias_gen = f"Estudiante {pseudonimo}"
-                    cursor.execute("INSERT INTO alumnos (pseudonimo, alias, total_puntos) VALUES (?, ?, 0)", (pseudonimo, alias_gen))
+                    # Crear nuevo alumno automáticamente si se escanea un QR nuevo
+                    alias_gen = extracted_alias if extracted_alias else f"Estudiante {pseudonimo}"
+                    cursor.execute("INSERT INTO alumnos (pseudonimo, alias, grupo, total_puntos) VALUES (?, ?, ?, 0)", (pseudonimo, alias_gen, extracted_grupo))
                     conn.commit()
-                    cursor.execute("SELECT id, pseudonimo, alias, total_puntos FROM alumnos WHERE pseudonimo = ?", (pseudonimo,))
+                    cursor.execute("SELECT id, pseudonimo, alias, total_puntos FROM alumnos WHERE UPPER(pseudonimo) = ?", (pseudonimo,))
                     alumno = cursor.fetchone()
 
                 alumno_id = alumno["id"]
                 alumno_alias = alumno["alias"]
                 puntos_anteriores = alumno["total_puntos"]
 
-                # 2. Verificar si YA ha sido escaneado hoy en esta sección
+                # 2. Verificar duplicado en el mismo día y sección
                 cursor.execute(
                     "SELECT hora FROM registros WHERE alumno_id = ? AND seccion = ? AND fecha = ?",
                     (alumno_id, seccion, fecha_hoy)
@@ -333,7 +330,7 @@ class EscuelaPointsHandler(http.server.SimpleHTTPRequestHandler):
                     }, status=409)
                     return
 
-                # 3. Registrar el escaneo y otorgar puntos
+                # 3. Registrar el escaneo y sumar puntos
                 cursor.execute(
                     "INSERT INTO registros (alumno_id, pseudonimo, seccion, puntos, fecha, hora) VALUES (?, ?, ?, ?, ?, ?)",
                     (alumno_id, pseudonimo, seccion, puntos_seccion, fecha_hoy, hora_actual)
@@ -361,7 +358,7 @@ class EscuelaPointsHandler(http.server.SimpleHTTPRequestHandler):
                 })
                 return
 
-            except sqlite3.IntegrityError as e:
+            except sqlite3.IntegrityError:
                 conn.close()
                 self._send_json({
                     "ok": False,
@@ -375,7 +372,6 @@ class EscuelaPointsHandler(http.server.SimpleHTTPRequestHandler):
                 return
 
         elif path == "/api/reset":
-            # Reseteo de demo para pruebas limpias
             conn = sqlite3.connect(DB_FILE)
             cursor = conn.cursor()
             cursor.execute("DELETE FROM registros")
@@ -401,11 +397,6 @@ def run():
     print("=" * 65)
     print(f"  Acceso Local (PC):          http://localhost:{PORT}")
     print(f"  Acceso Móvil Wi-Fi:         http://{best_ip}:{PORT} (RECOMENDADO)")
-    if len(all_ips) > 1:
-        print("  Otras interfaces detectadas:")
-        for item in all_ips:
-            if item["ip"] != best_ip:
-                print(f"    - http://{item['ip']}:{PORT} ({item['label']})")
     print("  Base de Datos SQLite:       escuela_puntos.db")
     print("  Clave PIN Profesor (Demo):  0000")
     print("  Horario Lectivo:            Lunes a Viernes 08:00 a 14:30")
