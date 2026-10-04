@@ -130,13 +130,7 @@ def init_database():
     if count == 0:
         alumnos_demo = [
             ("ALUM-LINCE-01", "Lince Ágil", "1º ESO A"),
-            ("ALUM-HALCON-02", "Halcón Dorado", "1º ESO A"),
-            ("ALUM-ORION-03", "Orión Estelar", "1º ESO B"),
-            ("ALUM-FENIX-04", "Fénix Fuego", "2º ESO A"),
-            ("ALUM-APOLO-05", "Apolo Solar", "2º ESO B"),
-            ("ALUM-DELTA-06", "Delta Nova", "3º ESO A"),
-            ("ALUM-ATLAS-07", "Atlas Titán", "3º ESO B"),
-            ("ALUM-ZEUS-08", "Zeus Rayo", "4º ESO A")
+            ("https://www.ride-laviniafontana.com, Lavinia Fontana, 1ºESO A")
         ]
         cursor.executemany(
             "INSERT INTO alumnos (pseudonimo, alias, grupo, total_puntos) VALUES (?, ?, ?, 0)",
