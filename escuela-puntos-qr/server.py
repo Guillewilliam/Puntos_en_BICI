@@ -125,7 +125,10 @@ def init_database():
     if count == 0:
         alumnos_demo = [
             ("ALUM-LINCE-01", "Lince Ágil", "1º ESO A"),
-            ("HTTPS://WWW.RIDE-LAVINIAFONTANA.COM", "Lavinia Fontana", "1º ESO A")
+            ("https://www.ride-marycassatt.com", "Mary Cassatt", "4º ESO C"),
+            ("https://www.ride-paulamodersohnbecker.com", "Paula Modersohn-Becker", "1º CFGS"),
+            ("https://www.ride-fridakahlo.com", "Frida Kahlo", "3º ESO A"),
+            ("https://www.ride-marujamallo.com", "Maruja Mallo", "1º ESO A")
         ]
         cursor.executemany(
             "INSERT INTO alumnos (pseudonimo, alias, grupo, total_puntos) VALUES (?, ?, ?, 0)",
