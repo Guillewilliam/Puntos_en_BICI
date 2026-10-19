@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Servidor HTTP y API REST para Sistema de Puntos Escolar con Códigos QR
+Servidor HTTP y API REST para CONTACLETA - Recuento de participación RIDE
 Utiliza exclusivamente la librería estándar de Python (http.server + sqlite3).
-Compatible con ejecución local y acceso en red Wi-Fi desde Android e iOS.
+Compatible con ejecución local, Render.com y acceso en red Wi-Fi desde Android e iOS.
 """
 
 import http.server
@@ -15,6 +15,7 @@ import sys
 import ssl
 import socket
 import datetime
+import re
 from urllib.parse import urlparse, parse_qs
 
 def get_ssl_context():
@@ -27,7 +28,7 @@ def get_ssl_context():
         return ctx
     return None
 
-PORT = 8000
+PORT = int(os.environ.get("PORT", 8000))
 DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "escuela_puntos.db")
 STATIC_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -39,6 +40,75 @@ SECCIONES_CONFIG = {
 }
 
 PIN_DOCENTE = "0000"
+
+# Lista completa de los 50 alumnos extraídos de los carnets QR
+ALUMNOS_INICIALES = [
+    ("https://www.berthemorisot.com", "Berthe Morisot", "Grupo A"),
+    ("https://www.leonardodavinci.com", "Leonardo Da Vinci", "Grupo A"),
+    ("https://www.ride-andywarhol.com", "Andy Warhol", "Grupo A"),
+    ("https://www.ride-artemisiagentileschi.com", "Artemisia Gentileschi", "Grupo A"),
+    ("https://www.ride-boticellli.com", "Botticelli", "Grupo A"),
+    ("https://www.ride-caravaggio.com", "Caravaggio", "Grupo A"),
+    ("https://www.ride-cezanne.com", "Cézanne", "Grupo A"),
+    ("https://www.ride-clarapeeters.com", "Clara Peeters", "Grupo A"),
+    ("https://www.ride-dalí.com", "Dalí", "Grupo A"),
+    ("https://www.ride-elbosco.com", "El Bosco", "Grupo A"),
+    ("https://www.ride-elisabethvigéelebrun.com", "Elisabeth Vigée Le Brun", "Grupo A"),
+    ("https://www.ride-georgiaokeeffe.com", "Georgia O'Keeffe", "Grupo A"),
+    ("https://www.ride-goya.com", "Goya", "Grupo A"),
+    ("https://www.ride-gustavklimt.com", "Gustav Klimt", "Grupo A"),
+    ("https://www.ride-helenfrankenthaler.com", "Helen Frankenthaler", "Grupo A"),
+    ("https://www.ride-henrimatisse.com", "Henri Matisse", "Grupo A"),
+    ("https://www.ride-hilmaafklint.com", "Hilma af Klint", "Grupo A"),
+    ("https://www.ride-judithleyster.com", "Judith Leyster", "Grupo A"),
+    ("https://www.ride-laviniafontana.com", "Lavinia Fontana", "Grupo A"),
+    ("https://www.ride-leonoracarrington.com", "Leonora Carrington", "Grupo A"),
+    ("https://www.ride-louisebourgeois.com", "Louise Bourgeois", "Grupo A"),
+    ("https://www.ride-manet.com", "Manet", "Grupo A"),
+    ("https://www.ride-mariablanchard.com", "María Blanchard", "Grupo A"),
+    ("https://www.ride-miguelangel.com", "Miguel Ángel", "Grupo A"),
+    ("https://www.ride-miro.com", "Miró", "Grupo A"),
+    ("https://www.ride-monet.com", "Monet", "Grupo A"),
+    ("https://www.ride-munch.com", "Munch", "Grupo A"),
+    ("https://www.ride-paulgauguin.com", "Paul Gauguin", "Grupo A"),
+    ("https://www.ride-picasso.com", "Picasso", "Grupo A"),
+    ("https://www.ride-pollock.com", "Pollock", "Grupo A"),
+    ("https://www.ride-rachelruysch.com", "Rachel Ruysch", "Grupo A"),
+    ("https://www.ride-raphael.com", "Raphael", "Grupo A"),
+    ("https://www.ride-rembrandt.com", "Rembrandt", "Grupo A"),
+    ("https://www.ride-remediosvaro.com", "Remedios Varo", "Grupo A"),
+    ("https://www.ride-renoir.com", "Renoir", "Grupo A"),
+    ("https://www.ride-rosabonheur.com", "Rosa Bonheur", "Grupo A"),
+    ("https://www.ride-sofonisbaanguissola.com", "Sofonisba Anguissola", "Grupo A"),
+    ("https://www.ride-soniadelaunay.com", "Sonia Delaunay", "Grupo A"),
+    ("https://www.ride-susanvaladon.com", "Suzanne Valadon", "Grupo A"),
+    ("https://www.ride-tamaradelempika.com", "Tamara de Lempicka", "Grupo A"),
+    ("https://www.ride-tiziano.com", "Tiziano", "Grupo A"),
+    ("https://www.ride-vanderweyden.com", "Van der Weyden", "Grupo A"),
+    ("https://www.ride-vangogh.com", "Van Gogh", "Grupo A"),
+    ("https://www.ride-velázquez.com", "Velázquez", "Grupo A"),
+    ("https://www.ride-yayoirokusama.com", "Yayoi Kusama", "Grupo A"),
+    ("https://www.ride-fridakahlo.com", "Frida Kahlo", "1º ESO A"),
+    ("https://www.ride-marujamallo.com", "Maruja Mallo", "1º ESO A"),
+    ("https://www.ride-marycassatt.com", "Mary Cassatt", "4º ESO C"),
+    ("https://www.ride-paulamodersohnbecker.com", "Paula Modersohn-Becker", "1º CFGS")
+]
+
+# Diccionario inteligente para mapeo inmediato de URLs a nombres limpios y grupos
+MAPA_NOMBRES_CONOCIDOS = {url.lower(): (nombre, grupo) for url, nombre, grupo in ALUMNOS_INICIALES}
+
+def extraer_nombre_desde_qr(pseudonimo):
+    """Extrae un nombre legible si el QR es una URL o código sin alias explícito."""
+    clave_lower = pseudonimo.lower().strip()
+    if clave_lower in MAPA_NOMBRES_CONOCIDOS:
+        return MAPA_NOMBRES_CONOCIDOS[clave_lower][0]
+    
+    # Si es una URL del tipo https://www.ride-nombreapellido.com
+    match = re.search(r'ride-([a-zA-Z0-9\-]+)', clave_lower)
+    if match:
+        limpio = match.group(1).replace('-', ' ').title()
+        return limpio
+    return f"Alumno ({pseudonimo})"
 
 def get_all_local_ips():
     """Detecta y prioriza todas las interfaces de red locales (Wi-Fi vs VPN)."""
@@ -86,8 +156,28 @@ def get_best_local_ip():
     all_ips = get_all_local_ips()
     return all_ips[0]["ip"] if all_ips else "127.0.0.1"
 
+def sincronizar_alumnos_base(cursor):
+    """Elimina los alumnos demo antiguos y asegura que los alumnos del código tengan su nombre."""
+    # Eliminar antiguos alumnos demo (ALUM-LINCE-01, ALUM-HALCON-02, etc.)
+    cursor.execute("DELETE FROM alumnos WHERE pseudonimo LIKE 'ALUM-%'")
+    
+    for pseudonimo, alias, grupo in ALUMNOS_INICIALES:
+        # Buscar si ya existe (ignorando mayúsculas/minúsculas)
+        cursor.execute("SELECT id FROM alumnos WHERE LOWER(pseudonimo) = LOWER(?)", (pseudonimo,))
+        row = cursor.fetchone()
+        if row:
+            cursor.execute(
+                "UPDATE alumnos SET pseudonimo = ?, alias = ?, grupo = ? WHERE id = ?",
+                (pseudonimo, alias, grupo, row[0])
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO alumnos (pseudonimo, alias, grupo, total_puntos) VALUES (?, ?, ?, 0)",
+                (pseudonimo, alias, grupo)
+            )
+
 def init_database():
-    """Inicializa las tablas SQLite y precarga alumnos con pseudónimos de prueba."""
+    """Inicializa las tablas SQLite y sincroniza los alumnos configurados en el código."""
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     
@@ -119,22 +209,8 @@ def init_database():
     );
     """)
 
-    # Precarga de los 2 alumnos demo si la tabla está vacía
-    cursor.execute("SELECT COUNT(*) FROM alumnos")
-    count = cursor.fetchone()[0]
-    if count == 0:
-        alumnos_demo = [
-            ("ALUM-LINCE-01", "Lince Ágil", "1º ESO A"),
-            ("https://www.ride-marycassatt.com", "Mary Cassatt", "4º ESO C"),
-            ("https://www.ride-paulamodersohnbecker.com", "Paula Modersohn-Becker", "1º CFGS"),
-            ("https://www.ride-fridakahlo.com", "Frida Kahlo", "3º ESO A"),
-            ("https://www.ride-marujamallo.com", "Maruja Mallo", "1º ESO A")
-        ]
-        cursor.executemany(
-            "INSERT INTO alumnos (pseudonimo, alias, grupo, total_puntos) VALUES (?, ?, ?, 0)",
-            alumnos_demo
-        )
-        conn.commit()
+    sincronizar_alumnos_base(cursor)
+    conn.commit()
     conn.close()
 
 def es_horario_lectivo(dt=None):
@@ -211,7 +287,7 @@ class EscuelaPointsHandler(http.server.SimpleHTTPRequestHandler):
             conn = sqlite3.connect(DB_FILE)
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute("SELECT id, pseudonimo, alias, grupo, total_puntos FROM alumnos ORDER BY total_puntos DESC, pseudonimo ASC")
+            cursor.execute("SELECT id, pseudonimo, alias, grupo, total_puntos FROM alumnos ORDER BY total_puntos DESC, alias ASC")
             rows = cursor.fetchall()
             alumnos = [dict(row) for row in rows]
             conn.close()
@@ -248,7 +324,7 @@ class EscuelaPointsHandler(http.server.SimpleHTTPRequestHandler):
                 self._send_json({
                     "ok": True,
                     "message": "Autenticación correcta",
-                    "docente": "Profesor Demo",
+                    "docente": "Profesor RIDE",
                     "rol": "docente"
                 })
             else:
@@ -271,11 +347,11 @@ class EscuelaPointsHandler(http.server.SimpleHTTPRequestHandler):
                 self._send_json({"ok": False, "message": f"Sección inválida: {seccion}"}, status=400)
                 return
 
-            # Si el contenido del QR incluye datos separados por coma ("URL, Alias, Grupo")
+            # Si el contenido del QR incluye datos separados por coma ("URL, Nombre, Grupo")
             parts = [p.strip() for p in raw_input.split(",")]
-            pseudonimo = parts[0].upper()
-            extracted_alias = parts[1] if len(parts) > 1 else None
-            extracted_grupo = parts[2] if len(parts) > 2 else "Grupo A"
+            pseudonimo_raw = parts[0]
+            extracted_alias = parts[1] if len(parts) > 1 and parts[1] else None
+            extracted_grupo = parts[2] if len(parts) > 2 and parts[2] else None
 
             now = datetime.datetime.now()
             fecha_hoy = now.strftime("%Y-%m-%d")
@@ -297,20 +373,36 @@ class EscuelaPointsHandler(http.server.SimpleHTTPRequestHandler):
             cursor = conn.cursor()
 
             try:
-                # 1. Buscar alumno existente por pseudónimo (sensible/insensible a mayúsculas)
-                cursor.execute("SELECT id, pseudonimo, alias, total_puntos FROM alumnos WHERE UPPER(pseudonimo) = ?", (pseudonimo,))
+                # 1. Buscar alumno existente por pseudónimo (insensible a mayúsculas/minúsculas)
+                cursor.execute("SELECT id, pseudonimo, alias, grupo, total_puntos FROM alumnos WHERE LOWER(pseudonimo) = LOWER(?)", (pseudonimo_raw,))
                 alumno = cursor.fetchone()
 
                 if not alumno:
-                    # Crear nuevo alumno automáticamente si se escanea un QR nuevo
-                    alias_gen = extracted_alias if extracted_alias else f"Estudiante {pseudonimo}"
-                    cursor.execute("INSERT INTO alumnos (pseudonimo, alias, grupo, total_puntos) VALUES (?, ?, ?, 0)", (pseudonimo, alias_gen, extracted_grupo))
+                    # Determinar nombre y grupo si se escanea un QR nuevo
+                    clave_lower = pseudonimo_raw.lower()
+                    if not extracted_alias:
+                        extracted_alias = extraer_nombre_desde_qr(pseudonimo_raw)
+                    if not extracted_grupo:
+                        extracted_grupo = MAPA_NOMBRES_CONOCIDOS.get(clave_lower, (None, "Grupo RIDE"))[1]
+
+                    cursor.execute(
+                        "INSERT INTO alumnos (pseudonimo, alias, grupo, total_puntos) VALUES (?, ?, ?, 0)",
+                        (pseudonimo_raw, extracted_alias, extracted_grupo)
+                    )
                     conn.commit()
-                    cursor.execute("SELECT id, pseudonimo, alias, total_puntos FROM alumnos WHERE UPPER(pseudonimo) = ?", (pseudonimo,))
+                    cursor.execute("SELECT id, pseudonimo, alias, grupo, total_puntos FROM alumnos WHERE LOWER(pseudonimo) = LOWER(?)", (pseudonimo_raw,))
                     alumno = cursor.fetchone()
+                else:
+                    # Si el QR traía nombre explícito y en la BD tenía un nombre genérico, actualizarlo
+                    if extracted_alias and (not alumno["alias"] or alumno["alias"].startswith("Estudiante ")):
+                        cursor.execute("UPDATE alumnos SET alias = ? WHERE id = ?", (extracted_alias, alumno["id"]))
+                        conn.commit()
+                        cursor.execute("SELECT id, pseudonimo, alias, grupo, total_puntos FROM alumnos WHERE id = ?", (alumno["id"],))
+                        alumno = cursor.fetchone()
 
                 alumno_id = alumno["id"]
-                alumno_alias = alumno["alias"]
+                pseudonimo_db = alumno["pseudonimo"]
+                alumno_alias = alumno["alias"] or extraer_nombre_desde_qr(pseudonimo_db)
                 puntos_anteriores = alumno["total_puntos"]
 
                 # 2. Verificar duplicado en el mismo día y sección
@@ -326,8 +418,8 @@ class EscuelaPointsHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_json({
                         "ok": False,
                         "error_code": "ALREADY_SCANNED",
-                        "message": f"El alumno {pseudonimo} ya ha sido registrado hoy en '{nombre_seccion}' a las {hora_previa}. (Solo 1 escaneo por sección al día).",
-                        "alumno": {"pseudonimo": pseudonimo, "alias": alumno_alias},
+                        "message": f"{alumno_alias} ya ha sido registrado/a hoy en '{nombre_seccion}' a las {hora_previa}. (Solo 1 escaneo por sección al día).",
+                        "alumno": {"pseudonimo": pseudonimo_db, "alias": alumno_alias},
                         "seccion": nombre_seccion,
                         "hora_previa": hora_previa
                     }, status=409)
@@ -336,7 +428,7 @@ class EscuelaPointsHandler(http.server.SimpleHTTPRequestHandler):
                 # 3. Registrar el escaneo y sumar puntos
                 cursor.execute(
                     "INSERT INTO registros (alumno_id, pseudonimo, seccion, puntos, fecha, hora) VALUES (?, ?, ?, ?, ?, ?)",
-                    (alumno_id, pseudonimo, seccion, puntos_seccion, fecha_hoy, hora_actual)
+                    (alumno_id, pseudonimo_db, seccion, puntos_seccion, fecha_hoy, hora_actual)
                 )
 
                 nuevo_total = puntos_anteriores + puntos_seccion
@@ -346,10 +438,10 @@ class EscuelaPointsHandler(http.server.SimpleHTTPRequestHandler):
 
                 self._send_json({
                     "ok": True,
-                    "message": f"¡Puntos asignados con éxito! +{puntos_seccion} pts en {nombre_seccion}",
+                    "message": f"¡Participación registrada! +{puntos_seccion} pts en {nombre_seccion}",
                     "alumno": {
                         "id": alumno_id,
-                        "pseudonimo": pseudonimo,
+                        "pseudonimo": pseudonimo_db,
                         "alias": alumno_alias,
                         "puntos_ganados": puntos_seccion,
                         "total_puntos": nuevo_total
@@ -379,9 +471,10 @@ class EscuelaPointsHandler(http.server.SimpleHTTPRequestHandler):
             cursor = conn.cursor()
             cursor.execute("DELETE FROM registros")
             cursor.execute("UPDATE alumnos SET total_puntos = 0")
+            sincronizar_alumnos_base(cursor)
             conn.commit()
             conn.close()
-            self._send_json({"ok": True, "message": "Datos de registros y puntuaciones reiniciados correctamente."})
+            self._send_json({"ok": True, "message": "Base de datos sincronizada y puntuaciones reiniciadas a 0 correctamente."})
             return
 
         self._send_json({"ok": False, "message": "Ruta no encontrada"}, status=404)
@@ -389,19 +482,23 @@ class EscuelaPointsHandler(http.server.SimpleHTTPRequestHandler):
 def run():
     init_database()
     best_ip = get_best_local_ip()
-    all_ips = get_all_local_ips()
     
     server_address = ("0.0.0.0", PORT)
     httpd = http.server.ThreadingHTTPServer(server_address, EscuelaPointsHandler)
     httpd.allow_reuse_address = True
 
+    ssl_ctx = get_ssl_context()
+    protocol = "https" if ssl_ctx else "http"
+    if ssl_ctx:
+        httpd.socket = ssl_ctx.wrap_socket(httpd.socket, server_side=True)
+
     print("=" * 65)
-    print("  SISTEMA ESCOLAR DE PUNTOS POR QR - SERVIDOR ACTIVO")
+    print("  CONTACLETA - SISTEMA ESCOLAR DE PUNTOS POR QR ACTIVO")
     print("=" * 65)
-    print(f"  Acceso Local (PC):          http://localhost:{PORT}")
-    print(f"  Acceso Móvil Wi-Fi:         http://{best_ip}:{PORT} (RECOMENDADO)")
+    print(f"  Acceso Local (PC):          {protocol}://localhost:{PORT}")
+    print(f"  Acceso Móvil Wi-Fi:         {protocol}://{best_ip}:{PORT} (RECOMENDADO)")
     print("  Base de Datos SQLite:       escuela_puntos.db")
-    print("  Clave PIN Profesor (Demo):  0000")
+    print("  Clave PIN Profesor:         0000")
     print("  Horario Lectivo:            Lunes a Viernes 08:00 a 14:30")
     print("=" * 65)
     print("Presiona Ctrl+C para detener el servidor.\n")

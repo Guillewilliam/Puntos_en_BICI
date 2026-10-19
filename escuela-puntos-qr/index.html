@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="dark">
+<html lang="es" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#0b0f19">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#f1f5f9">
   <title>CONTACLETA - Recuento de participación RIDE</title>
   <meta name="description" content="Sistema dinámico de asignación de puntos escolares mediante códigos QR y pseudónimos con validación de horario lectivo y base de datos SQLite.">
   <link rel="stylesheet" href="css/styles.css">
@@ -18,14 +18,14 @@
   <!-- ================= CABECERA PRINCIPAL ================= -->
   <header class="app-header">
     <div class="brand">
-    <div class="brand-icon">
-      <img src="imgLogo.jpeg" alt="Logo Contacleta" style="width: 32px; height: 32px; border-radius: 5px;">
-  </div>
-  <div>
-    <div class="brand-title">CONTACLETA</div>
-    <div class="brand-subtitle">Recuento de participación RIDE</div>
-  </div>
-</div>
+      <div class="brand-icon">
+        <img src="imgLogo.jpeg" alt="Logo Contacleta" style="width: 32px; height: 32px; border-radius: 5px;">
+      </div>
+      <div>
+        <div class="brand-title">CONTACLETA</div>
+        <div class="brand-subtitle">Recuento de participación RIDE</div>
+      </div>
+    </div>
     
     <div class="header-actions">
       <!-- Badge de Estado Horario -->
@@ -39,9 +39,9 @@
         📱
       </button>
 
-      <!-- Botón Alternar Tema -->
+      <!-- Botón Alternar Tema (Modo Diurno por defecto) -->
       <button id="btn-theme-toggle" class="btn-icon" title="Cambiar Tema" aria-label="Cambiar Tema">
-        🌙
+        ☀️
       </button>
 
       <!-- Botón Cierre de Sesión (Cierre Web) -->
@@ -51,7 +51,7 @@
     </div>
   </header>
 
-  <!-- ================= BARRA DE CONTROL HORARIO (SIMULACIÓN DEMO) ================= -->
+  <!-- ================= BARRA DE CONTROL HORARIO (SIMULACIÓN ABIERTA DE PRUEBA) ================= -->
   <div class="schedule-bar">
     <div class="schedule-info">
       <span>⏰ <strong id="clock-display">--:--:--</strong></span>
@@ -98,7 +98,7 @@
         <div class="login-avatar">👨‍🏫</div>
         <h2 class="font-heading" style="font-size: 1.35rem; margin-bottom: 4px;">Acceso del Profesorado</h2>
         <p style="font-size: 0.82rem; color: var(--text-secondary);">
-          Introduce la llave de acceso (Clave Demo: <strong>0000</strong>)
+          Introduce la llave de acceso (Clave: <strong>0000</strong>)
         </p>
 
         <!-- Indicador de PIN (4 dígitos) -->
@@ -127,8 +127,8 @@
           <button class="num-btn fn-btn" data-key="backspace" title="Borrar último dígito">⌫</button>
         </div>
 
-        <button id="btn-quick-pin" style="margin-top: 18px; background: none; border: none; color: #60a5fa; font-size: 0.8rem; text-decoration: underline; cursor: pointer;">
-          ⚡ Rellenar automáticamente clave demo (0000)
+        <button id="btn-quick-pin" style="margin-top: 18px; background: none; border: none; color: #2563eb; font-size: 0.8rem; text-decoration: underline; cursor: pointer;">
+          ⚡ Acceso rápido (0000)
         </button>
       </div>
     </section>
@@ -139,7 +139,7 @@
     <section id="view-sections" class="view-section">
       <div class="sections-header">
         <div class="docente-badge">
-          <span>🛡️ Sesión Activa: Profesor Demo</span>
+          <span>🛡️ Sesión Activa: Profesor RIDE</span>
         </div>
         <h2 class="font-heading" style="font-size: 1.4rem; margin-bottom: 4px;">Selecciona la Sección</h2>
         <p style="font-size: 0.82rem; color: var(--text-secondary);">
@@ -148,46 +148,46 @@
       </div>
 
       <div class="sections-grid">
-  <!-- 1. Llegada -->
-  <div class="section-card llegada" data-seccion="llegada">
-    <div class="section-icon-box">🚲</div>
-    <div class="section-details">
-      <div class="section-title">Al cole en bici</div>
-      <div class="section-desc">Puntualidad e ingreso al centro escolar</div>
-    </div>
-    <div class="section-points-badge">+1 pto</div>
-  </div>
+        <!-- 1. Al cole en bici -->
+        <div class="section-card llegada" data-seccion="llegada">
+          <div class="section-icon-box">🚲</div>
+          <div class="section-details">
+            <div class="section-title">Al cole en bici</div>
+            <div class="section-desc">Puntualidad e ingreso al centro escolar</div>
+          </div>
+          <div class="section-points-badge">+1 pto</div>
+        </div>
 
-  <!-- 2. Taller -->
-  <div class="section-card taller" data-seccion="taller">
-    <div class="section-icon-box">🛠️</div>
-    <div class="section-details">
-      <div class="section-title">Taller</div>
-      <div class="section-desc">Prácticas experimentales y proyectos</div>
-    </div>
-    <div class="section-points-badge">+0 ptos</div>
-  </div>
+        <!-- 2. Taller -->
+        <div class="section-card taller" data-seccion="taller">
+          <div class="section-icon-box">🛠️</div>
+          <div class="section-details">
+            <div class="section-title">Taller</div>
+            <div class="section-desc">Prácticas experimentales y proyectos</div>
+          </div>
+          <div class="section-points-badge">+0 ptos</div>
+        </div>
 
-  <!-- 3. Excursiones -->
-  <div class="section-card excursiones" data-seccion="excursiones">
-    <div class="section-icon-box">🛣️</div>
-    <div class="section-details">
-      <div class="section-title">Ruta en bici</div>
-      <div class="section-desc">Salidas culturales, visitas y naturaleza</div>
-    </div>
-    <div class="section-points-badge">+0 ptos</div>
-  </div>
+        <!-- 3. Ruta en bici -->
+        <div class="section-card excursiones" data-seccion="excursiones">
+          <div class="section-icon-box">🛣️</div>
+          <div class="section-details">
+            <div class="section-title">Ruta en bici</div>
+            <div class="section-desc">Salidas culturales, visitas y naturaleza</div>
+          </div>
+          <div class="section-points-badge">+0 ptos</div>
+        </div>
 
-  <!-- 4. Divulgación -->
-  <div class="section-card divulgacion" data-seccion="divulgacion">
-    <div class="section-icon-box">📢</div>
-    <div class="section-details">
-      <div class="section-title">Divulgación</div>
-      <div class="section-desc">Presentaciones, debates y conferencias</div>
-    </div>
-    <div class="section-points-badge">+0 ptos</div>
-  </div>
-</div>
+        <!-- 4. Divulgación -->
+        <div class="section-card divulgacion" data-seccion="divulgacion">
+          <div class="section-icon-box">📢</div>
+          <div class="section-details">
+            <div class="section-title">Divulgación</div>
+            <div class="section-desc">Presentaciones, debates y conferencias</div>
+          </div>
+          <div class="section-points-badge">+0 ptos</div>
+        </div>
+      </div>
 
       <!-- Acceso Rápido a Base de Datos -->
       <div style="margin-top: 20px; display: flex; gap: 10px;">
@@ -204,7 +204,7 @@
       <!-- Banner de la sección activa -->
       <div id="scanner-banner" class="scan-active-banner llegada">
         <div>
-          <span id="active-section-name">Conteo de Llegada</span>
+          <span id="active-section-name">🚲 Al cole en bici</span>
           <span id="active-section-points" style="font-size: 0.8rem; opacity: 0.9; margin-left: 6px;">(+1 pto)</span>
         </div>
         <button id="btn-change-section" class="btn-pill-small">
@@ -286,21 +286,21 @@
         </div>
       </div>
 
-      <!-- Panel Rápido: Alumnos Demo para Pruebas Instantáneas --> 
+      <!-- Panel Rápido: Alumnos Registrados RIDE --> 
       <div class="demo-students-section">
         <div class="demo-students-header">
           <div class="demo-students-title">
-            <span>🎒 Alumnos Demo (Pseudónimos Protegidos)</span>
+            <span>🎒 Alumnado RIDE Registrado</span>
           </div>
-          <button id="btn-open-all-cards" style="background: none; border: none; color: #38bdf8; font-size: 0.75rem; cursor: pointer; text-decoration: underline;">
-            Ver Todos los QR
+          <button id="btn-open-all-cards" style="background: none; border: none; color: #0284c7; font-size: 0.75rem; cursor: pointer; text-decoration: underline; font-weight: 600;">
+            Ver Primer QR
           </button>
         </div>
         <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 10px;">
-          Pulsa <strong>"Escanear"</strong> para simular el pase del carnet en esta sección, o <strong>"Ver QR"</strong> para mostrar el código en pantalla:
+          Pulsa <strong>"Escanear"</strong> para registrar directamente al alumno/a en esta sección, o <strong>"QR"</strong> para mostrar su carnet:
         </p>
         <div class="students-chips-grid" id="demo-chips-container">
-          Generado dinámicamente por JS 
+          <!-- Generado dinámicamente por JS -->
         </div>
       </div>
     </section> 
@@ -332,7 +332,7 @@
       <!-- Pestaña 2: Historial en BBDD -->
       <div id="tab-content-logs" style="display: none;">
         <div style="margin-bottom: 10px; display: flex; gap: 8px;">
-          <input type="text" id="filter-pseudonym" placeholder="Filtrar por pseudónimo..." style="flex: 1; padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--surface-border); background: var(--surface-card); color: var(--text-primary); font-size: 0.8rem;">
+          <input type="text" id="filter-pseudonym" placeholder="Filtrar por nombre o código..." style="flex: 1; padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--surface-border); background: var(--surface-card); color: var(--text-primary); font-size: 0.8rem;">
           <button id="btn-refresh-db" class="btn-icon" title="Actualizar datos">🔄</button>
         </div>
         <div class="table-responsive">
@@ -340,7 +340,7 @@
             <thead>
               <tr>
                 <th>Hora</th>
-                <th>Pseudónimo</th>
+                <th>Alumno / Código</th>
                 <th>Sección</th>
                 <th>Pts</th>
               </tr>
@@ -352,12 +352,12 @@
         </div>
       </div>
 
-      <!-- Acciones de Administración Demo -->
+      <!-- Acciones de Administración -->
       <div style="margin-top: 18px; display: flex; gap: 8px;">
         <button id="btn-export-csv" class="btn-secondary" style="flex: 1;">
           📥 Exportar CSV
         </button>
-        <button id="btn-reset-db" class="btn-secondary" style="color: #f87171; border-color: rgba(239, 68, 68, 0.3);" title="Reiniciar puntos para pruebas limpias">
+        <button id="btn-reset-db" class="btn-secondary" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);" title="Sincronizar alumnos y reiniciar puntos">
           🗑️ Resetear BBDD
         </button>
       </div>
@@ -395,21 +395,21 @@
   <div class="qr-modal" id="student-qr-modal">
     <div class="qr-card-display">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">Carnet Escolar Protegido</span>
+        <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">Carnet Escolar RIDE</span>
         <button id="btn-close-qr-modal" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b;">✕</button>
       </div>
-      <h3 id="modal-student-alias" style="color: #0f172a; margin-bottom: 2px;">Lince Ágil</h3>
-      <div id="modal-student-pseudonym" style="font-family: monospace; font-size: 0.85rem; color: #0284c7; font-weight: 700; margin-bottom: 12px;">ALUM-LINCE-01</div>
+      <h3 id="modal-student-alias" style="color: #0f172a; margin-bottom: 2px;">Mary Cassatt</h3>
+      <div id="modal-student-pseudonym" style="font-family: monospace; font-size: 0.75rem; color: #0284c7; font-weight: 700; margin-bottom: 12px; word-break: break-all;">https://www.ride-marycassatt.com</div>
       
       <!-- Contenedor del código QR generado dinámicamente -->
       <div class="qr-card-canvas" id="modal-qr-container"></div>
 
       <p style="font-size: 0.72rem; color: #64748b; margin-top: 8px; line-height: 1.4;">
-        Apunta la cámara del móvil a este código para registrar los puntos en la sección seleccionada.
+        Apunta la cámara del móvil a este código para registrar la participación en la sección seleccionada.
       </p>
       <div style="margin-top: 14px; display: flex; gap: 8px;">
         <button id="btn-scan-this-student" class="btn-primary" style="padding: 10px; font-size: 0.85rem;">
-          ⚡ Escanear Ahora
+          ⚡ Registrar Ahora
         </button>
       </div>
     </div>
@@ -441,7 +441,7 @@
       </div>
 
       <p style="font-size: 0.7rem; color: #94a3b8; line-height: 1.3;">
-        💡 <strong>Nota:</strong> Si tienes un antivirus con VPN (como McAfee VPN), debes usar la IP de tu <strong>Wi-Fi local (192.168.1.188)</strong> para que tu teléfono pueda conectarse.
+        💡 <strong>Nota:</strong> Si tienes un antivirus con VPN, usa la IP de tu <strong>Wi-Fi local (192.168.x.x)</strong> para que tu teléfono pueda conectarse.
       </p>
     </div>
   </div>
